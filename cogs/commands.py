@@ -1,8 +1,10 @@
 import asyncio
-import discord
 import base64
 import json
 from datetime import datetime, timedelta
+from typing import Union
+
+import discord
 from discord.ext import commands, tasks
 from discord import app_commands
 
@@ -11,10 +13,6 @@ from beem.account import Account
 from beem.comment import Comment
 from beem.transactionbuilder import TransactionBuilder
 from beembase.operations import Vote
-from hiveengine.api import Api
-from hiveengine.tokenobject import Token
-from hiveengine.wallet import Wallet
-from typing import Union
 
 
 
@@ -68,7 +66,7 @@ class BotView(discord.ui.View):
         embed.set_author(name=f"@{self.ctx.bot.user.name}", icon_url=profurl or self.ctx.guild.icon)
         return embed
 
-    
+
     def gen_buttons(self) -> None:
         self.verifyB = Button(
             label="Verify ✅", command=self.verify, ctx=self.ctx,
@@ -113,10 +111,12 @@ class BotView(discord.ui.View):
 
 
     async def verify_tokens(self) -> bool:
-        wallet = Wallet(self.acc.name, blockchain_instance=Hive())
-        tokens = wallet.get_token(self.ctx.bot.config['TOKEN_NAME'])
-        if tokens and float(tokens.get('balance', 0)) >= self.ctx.bot.config['MIN_TOKENS']:
-            return True
+        resp = await self.ctx.bot.web_client.request("GET", f"https://ac-validator.genesisleaguesports.com/players/{self.acc.name}/balances")
+        async with resp:
+            assert resp.status == 200
+            for tkn in await resp.json():
+                if tkn.get('token', ' ') == self.ctx.bot.config['TOKEN_NAME'] and float(tkn.get('balance', 0)) >= self.ctx.bot.config['MIN_TOKENS']:
+                    return True
         return False
 
 
@@ -174,10 +174,6 @@ class Commands(commands.Cog, name="Commands"):
         self.hive = Hive()
 
 
-    async def cog_load(self):
-        self.wallet = Wallet(self.bot.config['ACC_NAME'], blockchain_instance=Hive())
-
-
     async def cog_unload(self):
         self.token_holders.cancel()
 
@@ -199,7 +195,6 @@ class Commands(commands.Cog, name="Commands"):
         if not acc:
             return
         link = message.content.split()[0]
-        weight = 0
         embed = await self.gen_embed()
         try:
             author, permlink = link.split('@', 1)[1].split('/', 1)
@@ -228,14 +223,18 @@ class Commands(commands.Cog, name="Commands"):
             embed.description = f"{link}"
             return await message.reply(embed=embed)
         age = round(datetime.timestamp(cmt['created']))
-        self.wallet.change_account(acc)
-        tokens = self.wallet.get_token(self.bot.config['TOKEN_NAME'])
-        if tokens and float(tokens.get('balance', 0)) >= self.bot.config['MIN_TOKENS']:
-            weight = round(float(tokens['balance']) / self.bot.config['VOTE_PCT'], 2)
-            if weight > 100:
-                weight = 100
-            elif weight < 0:
-                weight = 0
+        weight, tokens = 0, 0
+        resp = await self.bot.web_client.request("GET", f"https://ac-validator.genesisleaguesports.com/players/{acc}/balances")
+        async with resp:
+            assert resp.status == 200
+            for tkn in await resp.json():
+                if tkn.get('token', ' ') == self.bot.config['TOKEN_NAME'] and float(tkn.get('balance', 0)) >= self.bot.config['MIN_TOKENS']:
+                    tokens = float(tkn.get('balance', 0))
+                    weight = round(tokens / self.bot.config['VOTE_PCT'], 2)
+                    if weight > 100:
+                        weight = 100
+                    elif weight < 0:
+                        weight = 0
         if weight <= 0:
             return
         # Vote the post
@@ -279,19 +278,14 @@ class Commands(commands.Cog, name="Commands"):
 
 
     async def get_holders(self) -> dict:
-        lmt, n = 1000, 1
-        token = Token(self.bot.config['TOKEN_NAME'], api=Api(url='https://api.hive-engine.com/rpc/'))
-        h_list = token.get_holder(limit=lmt, offset=0)
         holders = {}
-        while h_list:
-            holders.update({x['account']: float(x['balance']) for x in h_list if float(x['balance']) >= self.bot.config['MIN_TOKENS']})
-            if len(h_list) < lmt or n > 10:
-                break
-            else:
-                h_list = token.get_holder(limit=lmt, offset=lmt*n)
-                n += 1
+        resp = await self.bot.web_client.request("GET", f"https://ac-validator.genesisleaguesports.com/tokens/{self.bot.config['TOKEN_NAME']}")
+        async with resp:
+            assert resp.status == 200
+            holders.update({x['player']: float(x['balance']) for x in await resp.json() if float(x['balance']) >= self.bot.config['MIN_TOKENS']})
         return holders
-    
+
+
 
     async def update_roles(self):
         permitted = await self.get_holders()
@@ -315,7 +309,7 @@ class Commands(commands.Cog, name="Commands"):
         except Exception as e:
             print(e)
 
-    
+
 
     @app_commands.guild_only()
     @app_commands.command(name="register", description="Link a Hive account.")
@@ -332,7 +326,6 @@ class Commands(commands.Cog, name="Commands"):
         ctx = await commands.Context.from_interaction(interaction)
         view = BotView(ctx, hacc)
         return await view.link_acc(interaction)
-        
 
 
 
