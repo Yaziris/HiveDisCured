@@ -7,5 +7,4 @@ requires-python = ">=3.11,<3.12"
 dependencies = [
     "beem==0.24.26",
     "discord-py==2.3.2",
-    "hiveengine==0.2.2",
 ]
