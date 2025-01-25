@@ -51,8 +51,9 @@ class BotView(discord.ui.View):
         super().__init__(timeout=timeout)
         self.ctx = ctx
         self.acc = acc
+        self.message = None
         self.embed = self.gen_embed()
-        self.buttons = self.gen_buttons()
+        self.gen_buttons()
 
 
 
@@ -90,7 +91,7 @@ class BotView(discord.ui.View):
     async def on_timeout(self) -> None:
         for item in self.children:
             item.disabled = True
-        if hasattr(self, 'message'):
+        if self.message:
             try:
                 await self.message.edit(view=self)
             except Exception:
@@ -144,7 +145,7 @@ class BotView(discord.ui.View):
                     await interaction.user.remove_roles(role)
         else:
             self.embed.title = "\n\n ❌❌⛔ Unverified ⛔❌❌"
-            self.embed.description = f"Couldn't link Hive account **@{self.acc.name}**. Make sure you already sent the transaction with the provided memo from it to **[@{self.ctx.bot.config["ACC_NAME"]}](https://peakd.com/@{self.ctx.bot.config["ACC_NAME"]})** then try registering again!"
+            self.embed.description = f"Couldn't link Hive account **@{self.acc.name}**. Make sure you already sent the transaction with the provided memo from it to **[@{self.ctx.bot.config['ACC_NAME']}](https://peakd.com/@{self.ctx.bot.config['ACC_NAME']})** then try registering again!"
             self.add_item(self.unverifiedB)
         await interaction.edit_original_response(embed=self.embed, view=self)
         return self.stop()
@@ -155,7 +156,7 @@ class BotView(discord.ui.View):
         self.add_item(self.cancelB)
         self.embed.add_field(
                 name=f"🔐 To link @{self.acc.name} with your discord user:",
-                value=f">>> Send a tiny amount of hive or hbd from @{self.acc.name}, to **[@{self.ctx.bot.config["ACC_NAME"]}](https://peakd.com/@{self.ctx.bot.config["ACC_NAME"]})** WITH ONLY the following in the memo:", inline=False)
+                value=f">>> Send a tiny amount of hive or hbd from @{self.acc.name}, to **[@{self.ctx.bot.config['ACC_NAME']}](https://peakd.com/@{self.ctx.bot.config['ACC_NAME']})** WITH ONLY the following in the memo:", inline=False)
         self.embed.add_field(
                 name=base64.b64encode(str(interaction.user.id).encode()).decode(),
                 value="\n>>> This is very important to verify your authority over that Hive account.\n\nOnce you've sent the transaction, click the __**Verify**__ ✅ button, and your account will be linked.", inline=False)
