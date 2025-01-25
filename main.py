@@ -1,11 +1,11 @@
 __version__ = '1.0.0'
 
 import asyncio
-import discord
 import json
 import logging
+import discord
 
-
+from aiohttp import ClientSession
 from discord.ext import commands
 
 
@@ -35,6 +35,7 @@ class HiveDisCured(commands.Bot):
         self.blacklist = []
         self.db = {}
         self.config = config
+        self.web_client = ClientSession()
         self.color = discord.Colour.dark_gold()
 
 
@@ -71,7 +72,7 @@ class HiveDisCured(commands.Bot):
         if message.guild.get_role(self.role_id) not in message.author.roles or not message.content.startswith("https://peakd.com/"):
             return
         self.loop.create_task(self.get_cog('Commands').curate(message))
-        
+
 
 
     async def on_guild_join(self, guild: discord.Guild) -> None:
@@ -111,7 +112,6 @@ class HiveDisCured(commands.Bot):
             logger.info(f"Created role {role.name} in {guild.name}")
         else:
             logger.info(f"Using role {guild.get_role(self.role_id)}")
-            
         if self.get_channel(self.chan_id) is None:
             #create private channel with permission overwrites
             permitted_role = guild.get_role(self.role_id)
@@ -125,7 +125,6 @@ class HiveDisCured(commands.Bot):
             logger.info(f"Created channel {chan.name} in {guild.name}")
         else:
             logger.info(f"Using Channel {self.get_channel(self.chan_id)}")
-        
         if self.config.get("CHAN_ID", 0) != self.chan_id or self.config.get("ROLE_ID", 0) != self.role_id:
             self.config["CHAN_ID"] = self.chan_id
             self.config["ROLE_ID"] = self.role_id
@@ -148,7 +147,7 @@ class HiveDisCured(commands.Bot):
 
 
 
-            
+
 
 
 async def configure():
@@ -164,7 +163,7 @@ async def configure():
                 "GUILD_ID": int(input("Enter your Discord server ID: ")),
                 "ACC_NAME": input("Enter your Hive curation account name: ").strip(" @").lower(),
                 "ACC_WIF": input("Enter your curation account's posting key: "),
-                "TOKEN_NAME": input("Enter your Hive-Engine token symbol: ").upper(),
+                "TOKEN_NAME": input("Enter the token symbol: ").upper(),
                 "MIN_TOKENS": float(input("Enter the minimum amount of tokens held for curator role: ")),
                 "VOTE_PCT": float(input("Token increment held per 1% vote: ")),
                 "POST_TAG": input("Enter a tag to check for on posts (Leave blank for no tag requirement): ").strip(" #").lower() or "None",
@@ -184,7 +183,7 @@ async def configure():
             json.dump(config, f)
         logger.info("Your configurations have been saved! You can change them later by editing the config.json file or deleting it to start over.")
     return config
-    
+
 
 
 async def main():
