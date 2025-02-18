@@ -84,7 +84,7 @@ class HiveDisCured(commands.Bot):
         if guild.id == self.guild_id:
             self.chan_id, self.role_id, self.config["CHAN_ID"], self.config["ROLE_ID"] = 0, 0, 0, 0
             with open("config.json", "w") as f:
-                json.dump(self.config, f)
+                json.dump(self.config, f, indent=4)
             self.get_cog('Commands').token_holders.cancel()
 
 
@@ -129,7 +129,7 @@ class HiveDisCured(commands.Bot):
             self.config["CHAN_ID"] = self.chan_id
             self.config["ROLE_ID"] = self.role_id
             with open("config.json", "w") as f:
-                json.dump(self.config, f)
+                json.dump(self.config, f, indent=4)
         # Load linked accounts
         try:
             with open("db.json", "r") as f:
@@ -180,7 +180,7 @@ async def configure():
                 logger.error("Invalid input. Please try again.")
                 return await configure()
         with open("config.json", "w") as f:
-            json.dump(config, f)
+            json.dump(config, f, indent=4)
         logger.info("Your configurations have been saved! You can change them later by editing the config.json file or deleting it to start over.")
     return config
 
