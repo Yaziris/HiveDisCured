@@ -25,8 +25,13 @@ Create a Discord Application from https://discord.com/developers/applications/ a
 - Back to the "Installation" tab, use the Discord provided installation link to invite the bot account into your Discord server. (You can do this step before or after you deploy the App, it doesn't matter)
 
 # Deploying and running the bot app on your server:
-Using the pre-packaged EXE file (Easiest):
-- Just download the pre-bundeled [HiveDisCur.exe](https://api.github.com/repos/Yaziris/HiveDisCured/releases/latest) file and run it on your machine!
+
+Deployment on local machine or VPS:
+- SSH into your VPS if deploying on one
+- Install Python 3.11 or higher on the system, git, and pip. <code>sudo apt install git python3 python3-pip -y</code>
+- Clone this repository in a folder on your local machine or VPS. <code>git clone -b arcadecolony https://github.com/Yaziris/HiveDisCured.git</code>
+- Navigate to the folder path in the terminal and Run <code>pip install -r requirements.txt</code>
+- Within the folder Run <code>python3 main.py</code>
 
 Deployment using Docker:
 - Download and install Docker from https://docs.docker.com/desktop/
@@ -34,12 +39,6 @@ Deployment using Docker:
 - Run Docker and open its terminal (lower right.)
 - Navigate to the extracted folder path in the terminal and Run <code>docker build -t hivediscured .</code>
 - Once the build is finished, run it with <code>docker run -it hivediscured</code>
-
-Deployment without Docker:
-- Clone this repository or download it and extract its contents in a folder on your local machine or host server (depending on where you will be hosting and running the bot from.)
-- Install Python 3.11 or higher on the system
-- Navigate to the extracted folder path in the terminal and Run <code>pip install -r requirements.txt</code>
-- Within the folder Run <code>python3 main.py</code>
 
 ## Easy Deployment Configurations Setup:
 Upon running the code for first time, it will ask for few inputs:
