@@ -29,7 +29,7 @@ Create a Discord Application from https://discord.com/developers/applications/ a
 Deployment on local machine or VPS:
 - SSH into your VPS if deploying on one
 - Install Python 3.11 or higher on the system, git, and pip. <code>sudo apt install git python3 python3-pip -y</code>
-- Clone this repository in a folder on your local machine or VPS. <code>git clone -b arcadecolony https://github.com/Yaziris/HiveDisCured.git</code>
+- Clone this repository in a folder on your local machine or VPS. <code>git clone --single-branch -b main https://github.com/Yaziris/HiveDisCured.git</code>
 - Navigate to the folder path in the terminal and Run <code>pip install -r requirements.txt</code>
 - Within the folder Run <code>python3 main.py</code>
 
@@ -61,6 +61,10 @@ Upon running the code for first time, it will ask for few inputs:
 > Enter your Hive-Engine token symbol:
 
 - The project's curation governance token symbol.
+
+> Staked or Liquid balance tokens? [S/L]:
+
+- Which user token balance to check for, their staked tokens or liquid.
 
 > Enter the minimum amount of tokens held for curator role:
 

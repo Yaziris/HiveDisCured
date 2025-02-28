@@ -83,7 +83,7 @@ class HiveDisCured(commands.Bot):
         if guild.id == self.guild_id:
             self.chan_id, self.role_id, self.config["CHAN_ID"], self.config["ROLE_ID"] = 0, 0, 0, 0
             with open("config.json", "w") as f:
-                json.dump(self.config, f)
+                json.dump(self.config, f, indent=4)
             self.get_cog('Commands').token_holders.cancel()
 
 
@@ -130,7 +130,7 @@ class HiveDisCured(commands.Bot):
             self.config["CHAN_ID"] = self.chan_id
             self.config["ROLE_ID"] = self.role_id
             with open("config.json", "w") as f:
-                json.dump(self.config, f)
+                json.dump(self.config, f, indent=4)
         # Load linked accounts
         try:
             with open("db.json", "r") as f:
@@ -165,10 +165,11 @@ async def configure():
                 "ACC_NAME": input("Enter your Hive curation account name: ").strip(" @").lower(),
                 "ACC_WIF": input("Enter your curation account's posting key: "),
                 "TOKEN_NAME": input("Enter your Hive-Engine token symbol: ").upper(),
+                "TOKEN_TYPE": "stake" if input("Staked or Liquid balance tokens? [S/L]: ").lower().startswith('s') else "balance",
                 "MIN_TOKENS": float(input("Enter the minimum amount of tokens held for curator role: ")),
                 "VOTE_PCT": float(input("Token increment held per 1% vote: ")),
                 "POST_TAG": input("Enter a tag to check for on posts (Leave blank for no tag requirement): ").strip(" #").lower() or "None",
-                "VOTE_COMMENTS": True if input("Allow voting comments? [Y/N]: ").lower().startswith('y') else False,
+                "VOTE_COMMENTS": input("Allow voting comments? [Y/N]: ").lower().startswith('y'),
                 "CUR_WINDOW": int(input("Allowed curation window in hours (Post must not be older than that many hours): ")) or 24,
                 "CHAN_ID": 0,
                 "ROLE_ID": 0
@@ -181,7 +182,7 @@ async def configure():
                 logger.error("Invalid input. Please try again.")
                 return await configure()
         with open("config.json", "w") as f:
-            json.dump(config, f)
+            json.dump(config, f, indent=4)
         logger.info("Your configurations have been saved! You can change them later by editing the config.json file or deleting it to start over.")
     return config
     

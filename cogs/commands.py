@@ -115,7 +115,7 @@ class BotView(discord.ui.View):
     async def verify_tokens(self) -> bool:
         wallet = Wallet(self.acc.name, blockchain_instance=Hive())
         tokens = wallet.get_token(self.ctx.bot.config['TOKEN_NAME'])
-        if tokens and float(tokens.get('balance', 0)) >= self.ctx.bot.config['MIN_TOKENS']:
+        if tokens and float(tokens.get(self.bot.config['TOKEN_TYPE'], 0)) >= self.ctx.bot.config['MIN_TOKENS']:
             return True
         return False
 
@@ -128,9 +128,9 @@ class BotView(discord.ui.View):
         await interaction.response.edit_message(embed=self.embed, view=self)
         self.clear_items()
         if await self.verify_acc(base64.b64encode(str(interaction.user.id).encode()).decode()):
-            self.ctx.bot.db[interaction.user.id] = self.acc.name
+            self.ctx.bot.db[str(interaction.user.id)] = self.acc.name
             with open("db.json", "w") as f:
-                json.dump(self.ctx.bot.db, f)
+                json.dump(self.ctx.bot.db, f, indent=4)
             self.embed.title = "✅ Verified!"
             self.embed.description = f"> **@{self.acc.name}** has been succesfully linked!\n\n"
             self.add_item(self.verifiedB)
@@ -160,7 +160,6 @@ class BotView(discord.ui.View):
         self.embed.add_field(
                 name=base64.b64encode(str(interaction.user.id).encode()).decode(),
                 value="\n>>> This is very important to verify your authority over that Hive account.\n\nOnce you've sent the transaction, click the __**Verify**__ ✅ button, and your account will be linked.", inline=False)
-        
         await interaction.response.send_message(embed=self.embed, view=self, ephemeral=True)
         self.message = await interaction.original_response()
 
@@ -172,10 +171,7 @@ class Commands(commands.Cog, name="Commands"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.hive = Hive()
-
-
-    async def cog_load(self):
-        self.wallet = Wallet(self.bot.config['ACC_NAME'], blockchain_instance=Hive())
+        self.wallet = Wallet(self.bot.config['ACC_NAME'], blockchain_instance=self.hive)
 
 
     async def cog_unload(self):
@@ -199,7 +195,6 @@ class Commands(commands.Cog, name="Commands"):
         if not acc:
             return
         link = message.content.split()[0]
-        weight = 0
         embed = await self.gen_embed()
         try:
             author, permlink = link.split('@', 1)[1].split('/', 1)
@@ -230,25 +225,19 @@ class Commands(commands.Cog, name="Commands"):
         age = round(datetime.timestamp(cmt['created']))
         self.wallet.change_account(acc)
         tokens = self.wallet.get_token(self.bot.config['TOKEN_NAME'])
-        if tokens and float(tokens.get('balance', 0)) >= self.bot.config['MIN_TOKENS']:
-            weight = round(float(tokens['balance']) / self.bot.config['VOTE_PCT'], 2)
-            if weight > 100:
-                weight = 100
-            elif weight < 0:
-                weight = 0
+        balance = float(tokens.get(self.bot.config['TOKEN_TYPE'], 0)) if tokens else 0
+        weight = max(min(round(balance / self.bot.config['VOTE_PCT'], 2), 100), 0)
         if weight <= 0:
             return
         # Vote the post
         tx = TransactionBuilder(blockchain_instance=self.hive)
         tx.appendOps(
-            Vote(
-                **{
+            Vote(**{
                     "voter": self.bot.config['ACC_NAME'],
                     "author": author,
                     "permlink": permlink,
                     "weight": int(float(weight) * 100)
-                }
-            )
+                })
         )
         if await self._broadcast_tx(tx):
             embed.title = ""
@@ -284,14 +273,13 @@ class Commands(commands.Cog, name="Commands"):
         h_list = token.get_holder(limit=lmt, offset=0)
         holders = {}
         while h_list:
-            holders.update({x['account']: float(x['balance']) for x in h_list if float(x['balance']) >= self.bot.config['MIN_TOKENS']})
+            holders.update({x['account']: float(x[self.bot.config['TOKEN_TYPE']]) for x in h_list if float(x[self.bot.config['TOKEN_TYPE']]) >= self.bot.config['MIN_TOKENS']})
             if len(h_list) < lmt or n > 10:
                 break
-            else:
-                h_list = token.get_holder(limit=lmt, offset=lmt*n)
-                n += 1
+            h_list = token.get_holder(limit=lmt, offset=lmt*n)
+            n += 1
         return holders
-    
+
 
     async def update_roles(self):
         permitted = await self.get_holders()
@@ -315,24 +303,22 @@ class Commands(commands.Cog, name="Commands"):
         except Exception as e:
             print(e)
 
-    
+
 
     @app_commands.guild_only()
     @app_commands.command(name="register", description="Link a Hive account.")
     @app_commands.describe(account="The Hive account to link with your Discord user")
     async def register(self, interaction: discord.Interaction, account: str):
         acc = account.strip(" @").lower()
-        if interaction.user.id in self.bot.db and self.bot.db[interaction.user.id] == acc:
+        if self.bot.db.get(str(interaction.user.id), '') == acc:
             return await interaction.response.send_message(f"**Your Discord user is already linked to the Hive account __@{acc}__! Enter a different account name and verify it if you want to re-link your Discord user with a different Hive account.**", ephemeral=True)
         if acc in self.bot.db.values():
             return await interaction.response.send_message(f"**The Hive account __@{acc}__ is already linked to a different user!**", ephemeral=True)
         hacc = await HiveAcc(account.strip(" @").lower())
         if not hacc:
             return await interaction.response.send_message(f"**The Hive account __@{acc}__ doesn't exist! Make sure you entered the correct account name.**", ephemeral=True)
-        ctx = await commands.Context.from_interaction(interaction)
-        view = BotView(ctx, hacc)
+        view = BotView(await commands.Context.from_interaction(interaction), hacc)
         return await view.link_acc(interaction)
-        
 
 
 
